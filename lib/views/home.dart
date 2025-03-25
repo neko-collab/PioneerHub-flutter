@@ -276,17 +276,17 @@ class _HomePageState extends State<HomePage> {
       children: [
         Row(
           children: [
-            _buildStatCard(Icons.book_outlined, "Courses", _pioneerHubInfo!.courses.toString()),
+            _buildStatCard(Icons.book_outlined, "Total Courses", _pioneerHubInfo!.courses.toString()),
             SizedBox(width: 16),
-            _buildStatCard(Icons.work_outlined, "Internships", _pioneerHubInfo!.internships.toString()),
+            _buildStatCard(Icons.work_outlined, "Total Internships", _pioneerHubInfo!.internships.toString()),
           ],
         ),
         SizedBox(height: 16),
         Row(
           children: [
-            _buildStatCard(Icons.build_outlined, "Projects", _pioneerHubInfo!.projects.toString()),
+            _buildStatCard(Icons.build_outlined, "Total Projects", _pioneerHubInfo!.projects.toString()),
             SizedBox(width: 16),
-            _buildStatCard(Icons.person_outlined, "Instructors", _pioneerHubInfo!.instructors.toString()),
+            _buildStatCard(Icons.person_outlined, "Total Instructors", _pioneerHubInfo!.instructors.toString()),
           ],
         ),
         SizedBox(height: 16),

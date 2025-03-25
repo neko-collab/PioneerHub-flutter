@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:hive/hive.dart';
 
 class ApiService {
-  String baseUrl = 'http://192.168.10.84/pioneer_backend/backend';
+  String baseUrl = 'http://192.168.10.83/pioneer_backend/backend';
 
   ApiService();
 
