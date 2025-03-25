@@ -103,7 +103,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
               floating: false,
               pinned: true,
               flexibleSpace: FlexibleSpaceBar(
-                title: Text(
+                title: Padding(padding: EdgeInsets.all(0), child: Text(
                   widget.course.title,
                   style: TextStyle(
                     color: Colors.white,
@@ -116,7 +116,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
                       ),
                     ],
                   ),
-                ),
+                ),),
                 background: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -194,7 +194,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
                       ],
                     ),
                     SizedBox(height: 16),
-                    _buildSectionTitle('Price'),
+                    
                     Text(
                       'Rs. ${widget.course.price.toStringAsFixed(2)}',
                       style: TextStyle(
@@ -204,7 +204,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
                       ),
                     ),
                     SizedBox(height: 16),
-                    _buildSectionTitle('Description'),
+                    
                     Text(
                       widget.course.description,
                       style: TextStyle(
