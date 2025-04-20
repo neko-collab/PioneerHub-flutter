@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:pioneerhub_app/controllers/internship_controller.dart';
-import 'package:pioneerhub_app/models/internship.dart';
+import 'package:pioneerhub_app/controllers/job_controller.dart';
+import 'package:pioneerhub_app/models/job.dart';
 import 'package:pioneerhub_app/services/api_service.dart';
-import 'package:pioneerhub_app/views/internship/internship-detail.dart';
+import 'package:pioneerhub_app/views/job/job_detail.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class MyApplicationsPage extends StatefulWidget {
-  const MyApplicationsPage({Key? key}) : super(key: key);
+class MyJobApplicationsPage extends StatefulWidget {
+  const MyJobApplicationsPage({Key? key}) : super(key: key);
 
   @override
-  _MyApplicationsPageState createState() => _MyApplicationsPageState();
+  _MyJobApplicationsPageState createState() => _MyJobApplicationsPageState();
 }
 
-class _MyApplicationsPageState extends State<MyApplicationsPage> {
-  final InternshipController _internshipController = InternshipController(apiService: ApiService());
-  List<InternshipApplication> _applications = [];
+class _MyJobApplicationsPageState extends State<MyJobApplicationsPage> {
+  final JobController _jobController = JobController(apiService: ApiService());
+  List<JobApplication> _applications = [];
   bool _isLoading = true;
 
   @override
@@ -29,7 +29,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage> {
     });
     
     try {
-      final applications = await _internshipController.getMyApplications();
+      final applications = await _jobController.getMyApplications();
       setState(() {
         _applications = applications;
         _isLoading = false;
@@ -47,6 +47,10 @@ class _MyApplicationsPageState extends State<MyApplicationsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text('My Job Applications'),
+        elevation: 0,
+      ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
           : _applications.isEmpty
@@ -76,22 +80,14 @@ class _MyApplicationsPageState extends State<MyApplicationsPage> {
           ),
           SizedBox(height: 8),
           Text(
-            'You haven\'t applied to any internships',
+            'You haven\'t applied to any jobs',
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey[600],
             ),
           ),
-          SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-            child: Text('Explore Internships'),
-          ),
+          
+          
         ],
       ),
     );
@@ -113,14 +109,14 @@ class _MyApplicationsPageState extends State<MyApplicationsPage> {
               borderRadius: BorderRadius.circular(12),
               onTap: () async {
                 try {
-                  final internship = await _internshipController.viewInternship(application.internshipId);
+                  final job = await _jobController.viewJob(application.jobId);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => InternshipDetailPage(internship: internship)),
+                    MaterialPageRoute(builder: (context) => JobDetailPage(job: job)),
                   );
                 } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error loading internship details: $e')),
+                    SnackBar(content: Text('Error loading job details: $e')),
                   );
                 }
               },
@@ -158,7 +154,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                application.internshipTitle ?? 'Untitled Internship',
+                                application.jobTitle ?? 'Untitled Job',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -188,21 +184,42 @@ class _MyApplicationsPageState extends State<MyApplicationsPage> {
                                   ),
                                 ],
                               ),
-                              if (application.cv != null && application.cv!.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 12.0),
-                                  child: OutlinedButton.icon(
-                                    onPressed: () => _openCvPreview(application.cv!),
-                                    icon: Icon(Icons.document_scanner, size: 16),
-                                    label: Text('View CV'),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.indigo,
-                                      side: BorderSide(color: Colors.indigo.shade300),
-                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-                                  ),
+                              
+                              // Add CV and Cover Letter preview buttons
+                              Padding(
+                                padding: const EdgeInsets.only(top: 12.0),
+                                child: Row(
+                                  children: [
+                                    if (application.cv != null && application.cv!.isNotEmpty)
+                                      OutlinedButton.icon(
+                                        onPressed: () => _openFilePreview(application.cv!, 'CV'),
+                                        icon: Icon(Icons.document_scanner, size: 16),
+                                        label: Text('View CV'),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: Colors.indigo,
+                                          side: BorderSide(color: Colors.indigo.shade300),
+                                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                      ),
+                                    if (application.cv != null && application.cv!.isNotEmpty && 
+                                       application.coverLetter != null && application.coverLetter!.isNotEmpty)
+                                      SizedBox(width: 8),
+                                    if (application.coverLetter != null && application.coverLetter!.isNotEmpty)
+                                      OutlinedButton.icon(
+                                        onPressed: () => _openFilePreview(application.coverLetter!, 'Cover Letter'),
+                                        icon: Icon(Icons.description, size: 16),
+                                        label: Text('View Cover Letter'),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: Colors.deepPurple,
+                                          side: BorderSide(color: Colors.deepPurple.shade300),
+                                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                      ),
+                                  ],
                                 ),
+                              ),
                             ],
                           ),
                         ),
@@ -224,15 +241,26 @@ class _MyApplicationsPageState extends State<MyApplicationsPage> {
     String statusText;
 
     switch (status.toLowerCase()) {
+      case 'selected':
       case 'accepted':
         badgeColor = Colors.green;
         iconData = Icons.check_circle;
-        statusText = 'Approved';
+        statusText = 'Selected';
         break;
       case 'rejected':
         badgeColor = Colors.red;
         iconData = Icons.cancel;
         statusText = 'Rejected';
+        break;
+      case 'interview':
+        badgeColor = Colors.blue;
+        iconData = Icons.people;
+        statusText = 'Interview';
+        break;
+      case 'reviewed':
+        badgeColor = Colors.amber;
+        iconData = Icons.visibility;
+        statusText = 'Reviewed';
         break;
       case 'pending':
       default:
@@ -276,9 +304,10 @@ class _MyApplicationsPageState extends State<MyApplicationsPage> {
     }
   }
 
-  void _openCvPreview(String cvPath) async {
+  // Method to open file preview in browser
+  void _openFilePreview(String filePath, String fileType) async {
     final ApiService apiService = ApiService();
-    final fullUrl = '${apiService.baseUrl}$cvPath';
+    final fullUrl = '${apiService.baseUrl}$filePath';
     
     try {
       final Uri uri = Uri.parse(fullUrl);
@@ -286,12 +315,12 @@ class _MyApplicationsPageState extends State<MyApplicationsPage> {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open CV: $fullUrl')),
+          SnackBar(content: Text('Could not open $fileType: $fullUrl')),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error opening CV: $e')),
+        SnackBar(content: Text('Error opening $fileType: $e')),
       );
     }
   }

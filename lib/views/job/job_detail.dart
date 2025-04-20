@@ -1,28 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import 'package:pioneerhub_app/controllers/internship_controller.dart';
-import 'package:pioneerhub_app/models/internship.dart';
+import 'package:pioneerhub_app/controllers/job_controller.dart';
+import 'package:pioneerhub_app/models/job.dart';
 import 'package:pioneerhub_app/models/user.dart';
 import 'package:pioneerhub_app/services/api_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 
-class InternshipDetailPage extends StatefulWidget {
-  final Internship internship;
+class JobDetailPage extends StatefulWidget {
+  final Job job;
   
-  const InternshipDetailPage({Key? key, required this.internship}) : super(key: key);
+  const JobDetailPage({Key? key, required this.job}) : super(key: key);
 
   @override
-  _InternshipDetailPageState createState() => _InternshipDetailPageState();
+  _JobDetailPageState createState() => _JobDetailPageState();
 }
 
-class _InternshipDetailPageState extends State<InternshipDetailPage> {
-  final InternshipController _internshipController = InternshipController(apiService: ApiService());
+class _JobDetailPageState extends State<JobDetailPage> {
+  final JobController _jobController = JobController(apiService: ApiService());
   bool _isLoading = false;
   bool _hasApplied = false;
   User? _loggedInUser;
   File? _cvFile;
   String? _fileName;
+  final TextEditingController _coverLetterController = TextEditingController();
   final ValueNotifier<bool> _filePickerChanged = ValueNotifier<bool>(false);
   
   @override
@@ -31,9 +32,10 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
     _loadUserData();
     _checkApplicationStatus();
   }
-  
+
   @override
   void dispose() {
+    _coverLetterController.dispose();
     _filePickerChanged.dispose();
     super.dispose();
   }
@@ -52,9 +54,9 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
     if (_loggedInUser?.role != 'user') return;
     
     try {
-      final applications = await _internshipController.getMyApplications();
+      final applications = await _jobController.getMyApplications();
       setState(() {
-        _hasApplied = applications.any((app) => app.internshipId == widget.internship.id);
+        _hasApplied = applications.any((app) => app.jobId == widget.job.id);
       });
     } catch (e) {
       // Handle error silently
@@ -74,7 +76,6 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
           _cvFile = File(result.files.single.path!);
           _fileName = result.files.single.name;
         });
-        // Notify listeners that file has changed
         _filePickerChanged.value = !_filePickerChanged.value;
       }
     } catch (e) {
@@ -84,12 +85,12 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
     }
   }
   
-  Future<void> _applyForInternship() async {
+  Future<void> _applyForJob() async {
     Navigator.pop(context); // Close the dialog
     
     if (_loggedInUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please log in to apply for internships')),
+        SnackBar(content: Text('Please log in to apply for jobs')),
       );
       return;
     }
@@ -99,13 +100,16 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
     });
     
     try {
-      await _internshipController.applyInternship(widget.internship.id, cvFile: _cvFile);
+      final coverLetter = _coverLetterController.text.isNotEmpty ? _coverLetterController.text : null;
+      await _jobController.applyJob(widget.job.id, cvFile: _cvFile, coverLetter: coverLetter);
+      
       setState(() {
         _hasApplied = true;
         _isLoading = false;
       });
+      
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Successfully applied for internship')),
+        SnackBar(content: Text('Successfully applied for job')),
       );
     } catch (e) {
       setState(() {
@@ -122,7 +126,7 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Apply for Internship'),
+          title: Text('Apply for Job'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -133,16 +137,15 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 8),
-                Text(widget.internship.title),
+                Text(widget.job.title),
                 SizedBox(height: 8),
-                Text('at ${widget.internship.company}'),
+                Text('at ${widget.job.company}'),
                 SizedBox(height: 16),
                 Text(
-                  'Upload your CV (optional):',
+                  'Upload your CV/Resume:',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 8),
-                // Wrap the file selection row with ValueListenableBuilder to update when file changes
                 ValueListenableBuilder<bool>(
                   valueListenable: _filePickerChanged,
                   builder: (context, _, __) {
@@ -181,6 +184,20 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
                     color: Colors.grey[600],
                   ),
                 ),
+                SizedBox(height: 16),
+                Text(
+                  'Cover Letter (optional):',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                TextField(
+                  controller: _coverLetterController,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    hintText: 'Enter your cover letter here...',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
               ],
             ),
           ),
@@ -190,7 +207,7 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
               child: Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: _applyForInternship,
+              onPressed: _applyForJob,
               child: Text('Submit Application'),
             ),
           ],
@@ -203,7 +220,7 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Internship Details'),
+        title: Text('Job Details'),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -265,7 +282,7 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.internship.title,
+                    widget.job.title,
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -279,7 +296,7 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
                       Icon(Icons.business, size: 16, color: Colors.grey[600]),
                       SizedBox(width: 4),
                       Text(
-                        widget.internship.company,
+                        widget.job.company,
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[600],
@@ -290,7 +307,7 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
                       SizedBox(width: 4),
                       Flexible(
                         child: Text(
-                          widget.internship.location,
+                          widget.job.location,
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],
@@ -345,7 +362,7 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
                 ),
                 child: Center(
                   child: Text(
-                    widget.internship.company[0].toUpperCase(),
+                    widget.job.company[0].toUpperCase(),
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -359,7 +376,7 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.internship.company,
+                    widget.job.company,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -367,7 +384,7 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Posted by ${widget.internship.employerName ?? "Employer"}',
+                    'Posted by ${widget.job.employerName ?? "Employer"}',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[600],
@@ -408,7 +425,7 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
           ),
           SizedBox(height: 8),
           Text(
-            widget.internship.description,
+            widget.job.description,
             style: TextStyle(
               fontSize: 14,
               height: 1.5,
@@ -444,12 +461,12 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
             ),
           ),
           SizedBox(height: 16),
-          _buildDetailRow('Type', _capitalizeFirstLetter(widget.internship.internshipType), Icons.work),
+          _buildDetailRow('Type', _capitalizeFirstLetter(widget.job.jobType), Icons.work),
           SizedBox(height: 8),
-          _buildDetailRow('Location', widget.internship.location, Icons.location_on),
-          if (widget.internship.createdAt.isNotEmpty) ...[
+          _buildDetailRow('Location', widget.job.location, Icons.location_on),
+          if (widget.job.createdAt.isNotEmpty) ...[
             SizedBox(height: 8),
-            _buildDetailRow('Posted on', _formatDate(widget.internship.createdAt), Icons.calendar_today),
+            _buildDetailRow('Posted on', _formatDate(widget.job.createdAt), Icons.calendar_today),
           ],
         ],
       ),
@@ -511,7 +528,7 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
                 Icon(Icons.check_circle, color: Colors.green),
                 SizedBox(width: 8),
                 Text(
-                  'You have applied for this internship',
+                  'You have applied for this job',
                   style: TextStyle(
                     color: Colors.green,
                     fontWeight: FontWeight.w500,

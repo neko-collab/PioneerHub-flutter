@@ -1,7 +1,9 @@
 import 'package:pioneerhub_app/services/api_service.dart';
 import 'package:pioneerhub_app/models/internship.dart';
 import 'dart:convert';
+import 'dart:io';
 import 'package:hive/hive.dart';
+import 'package:http/http.dart' as http;
 
 class InternshipController {
   final ApiService apiService;
@@ -106,7 +108,7 @@ class InternshipController {
     }
   }
 
-  Future<void> applyInternship(int internshipId) async {
+  Future<void> applyInternship(int internshipId, {File? cvFile}) async {
     try {
       var box = Hive.box('authBox');
       String? token = box.get('token');
@@ -115,14 +117,48 @@ class InternshipController {
         throw Exception('User not logged in');
       }
       
-      final response = await apiService.post('/internship.php', {
-        'action': 'applyInternship',
-        'internship_id': internshipId,
-      });
+      if (cvFile != null) {
+        // Handle file upload
+        var uri = Uri.parse('${apiService.baseUrl}/internship.php');
+        var request = http.MultipartRequest('POST', uri);
+        
+        // Add authorization header
+        request.headers['Authorization'] = 'Bearer $token';
+        
+        // Add form fields
+        request.fields['action'] = 'applyInternship';
+        request.fields['internship_id'] = internshipId.toString();
+        
+        // Add file
+        var stream = http.ByteStream(cvFile.openRead());
+        var length = await cvFile.length();
+        var multipartFile = http.MultipartFile(
+          'cv', 
+          stream, 
+          length,
+          filename: cvFile.path.split('/').last
+        );
+        request.files.add(multipartFile);
+        
+        // Send request
+        var response = await request.send();
+        
+        if (response.statusCode != 200) {
+          final responseBody = await response.stream.bytesToString();
+          final errorData = jsonDecode(responseBody);
+          throw Exception('Failed to apply for internship: ${errorData['message']}');
+        }
+      } else {
+        // Simple application without CV
+        final response = await apiService.post('/internship.php', {
+          'action': 'applyInternship',
+          'internship_id': internshipId,
+        });
 
-      if (response.statusCode != 200) {
-        final errorData = jsonDecode(response.body);
-        throw Exception('Failed to apply for internship: ${errorData['message']}');
+        if (response.statusCode != 200) {
+          final errorData = jsonDecode(response.body);
+          throw Exception('Failed to apply for internship: ${errorData['message']}');
+        }
       }
     } catch (e) {
       throw Exception('Failed to apply for internship: $e');
@@ -188,5 +224,23 @@ class InternshipController {
     }
   }
 
-  getMyApplications() {}
+  Future<List<InternshipApplication>> getMyApplications() async {
+    try {
+      final response = await apiService.post('/internship.php', {
+        'action': 'myApplications',
+      });
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return (responseData['data'] as List)
+            .map((application) => InternshipApplication.fromJson(application))
+            .toList();
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception('Failed to fetch my applications: ${errorData['message']}');
+      }
+    } catch (e) {
+      throw Exception('Failed to fetch my applications: $e');
+    }
+  }
 }

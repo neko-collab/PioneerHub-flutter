@@ -33,7 +33,7 @@ class ProjectController extends ChangeNotifier {
     try {
       final response = await apiService.get('/projects.php');
       final data = json.decode(response.body);
-      
+      print(data);
       if (data['status'] == 'success') {
         _projects = List<Project>.from(
           data['data'].map((x) => Project.fromJson(x))

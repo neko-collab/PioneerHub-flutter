@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pioneerhub_app/models/pioneerhub_info.dart';
 import 'package:pioneerhub_app/models/user.dart';
-import 'package:pioneerhub_app/test.dart';
 import 'package:pioneerhub_app/views/auth/change_password.dart';
 import 'package:pioneerhub_app/views/auth/checkotp.dart';
 import 'package:pioneerhub_app/views/auth/forgot_password.dart';
@@ -13,14 +12,19 @@ import 'package:pioneerhub_app/views/auth/register-select.dart';
 import 'package:pioneerhub_app/views/auth/register.dart';
 import 'package:pioneerhub_app/views/course/course_detail.dart';
 import 'package:pioneerhub_app/views/course/courses.dart';
-import 'package:pioneerhub_app/views/course/my-courses.dart';
 import 'package:pioneerhub_app/views/home.dart';
 import 'package:pioneerhub_app/views/internship/internship-detail.dart';
 import 'package:pioneerhub_app/views/internship/internships.dart';
 import 'package:pioneerhub_app/views/internship/my-applications.dart';
+import 'package:pioneerhub_app/views/job/job_detail.dart';
+import 'package:pioneerhub_app/views/job/jobs.dart';
+import 'package:pioneerhub_app/views/job/my_job_applications.dart';
 import 'package:pioneerhub_app/views/profile.dart';
+import 'package:pioneerhub_app/views/project/projects.dart';
+import 'package:pioneerhub_app/views/project/project_detail.dart';
 import 'package:provider/provider.dart';
 import 'package:pioneerhub_app/controllers/user_controller.dart';
+import 'package:pioneerhub_app/controllers/project_controller.dart';
 import 'package:pioneerhub_app/services/api_service.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -41,6 +45,9 @@ class PioneerApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => UserController(apiService: ApiService()),
         ),
+        ChangeNotifierProvider(
+          create: (_) => ProjectController(apiService: ApiService()),
+        ),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -59,19 +66,20 @@ class PioneerApp extends StatelessWidget {
           '/register-admin': (context) => RegisterAdminPage(),
           '/forgot_password': (context) => ForgotPasswordPage(),
 
-          
           // Main app routes
           '/home': (context) => MainScreen(),
           '/profile': (context) => ProfilePage(),
-          
+
           // Course routes
           '/courses': (context) => CoursesPage(),
-          '/my-courses': (context) => MyCoursesPage(), // Consistent with filename
-          '/my_courses': (context) => MyCoursesPage(), // Alternative for backward compatibility
           
           // Internship routes
           '/internships': (context) => InternshipsPage(),
           '/my-applications': (context) => MyApplicationsPage(),
+          
+          // Job routes
+          '/jobs': (context) => JobsPage(),
+          '/my-job-applications': (context) => MyJobApplicationsPage(),
         },
         // Use onGenerateRoute for routes that need parameters
         onGenerateRoute: (settings) {
@@ -82,16 +90,14 @@ class PioneerApp extends StatelessWidget {
                 course: args['course'],
               ),
             );
-          }
-          else if (settings.name == '/internship-detail') {
+          } else if (settings.name == '/internship-detail') {
             final args = settings.arguments as Map<String, dynamic>;
             return MaterialPageRoute(
               builder: (context) => InternshipDetailPage(
                 internship: args['internship'],
               ),
             );
-          }
-          else if (settings.name == '/change_password') {
+          } else if (settings.name == '/change_password') {
             final args = settings.arguments as Map<String, dynamic>;
             return MaterialPageRoute(
               builder: (context) => ChangePasswordPage(
@@ -99,12 +105,25 @@ class PioneerApp extends StatelessWidget {
                 otp: args['otp'],
               ),
             );
-          }
-          else if (settings.name == '/checkotp') {
+          } else if (settings.name == '/checkotp') {
             final args = settings.arguments as Map<String, dynamic>;
             return MaterialPageRoute(
               builder: (context) => OtpVerificationPage(
                 email: args['email'],
+              ),
+            );
+          } else if (settings.name == '/job-detail') {
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder: (context) => JobDetailPage(
+                job: args['job'],
+              ),
+            );
+          } else if (settings.name == '/project-detail') {
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder: (context) => ProjectDetailPage(
+                projectId: args['projectId'],
               ),
             );
           }
@@ -127,7 +146,8 @@ class _MainScreenState extends State<MainScreen> {
     HomePage(),
     CoursesPage(),
     InternshipsPage(),
-    PlaceholderWidget('Projects'),
+    JobsPage(),
+    ProjectsPage(),
     ProfilePage(),
   ];
 
@@ -142,6 +162,7 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed, // Add this line for more than 3 items
         backgroundColor: Colors.white,
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -155,6 +176,10 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.work),
             label: 'Internships',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.business_center),
+            label: 'Jobs',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.build),

@@ -8,8 +8,8 @@ import 'package:pioneerhub_app/models/user.dart';
 import 'package:pioneerhub_app/models/course.dart';
 import 'package:pioneerhub_app/services/api_service.dart';
 import 'package:pioneerhub_app/views/course/course_detail.dart';
-import 'package:pioneerhub_app/views/course/my-courses.dart';
 import 'package:pioneerhub_app/views/course/courses.dart';
+import 'package:pioneerhub_app/views/instructor/instructor_detail.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -126,18 +126,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                         const SizedBox(height: 8),
                         _buildTrendingCourses(),
-                        
-                        const SizedBox(height: 24),
-                        Text(
-                          "Quick Actions",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.indigo,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildQuickActions(),
+                 
                       ],
                     ),
                   ),
@@ -276,17 +265,17 @@ class _HomePageState extends State<HomePage> {
       children: [
         Row(
           children: [
-            _buildStatCard(Icons.book_outlined, "Total Courses", _pioneerHubInfo!.courses.toString()),
+            _buildStatCard(Icons.book_outlined, "Courses", _pioneerHubInfo!.courses.toString()),
             SizedBox(width: 16),
-            _buildStatCard(Icons.work_outlined, "Total Internships", _pioneerHubInfo!.internships.toString()),
+            _buildStatCard(Icons.work_outlined, "Internships", _pioneerHubInfo!.internships.toString()),
           ],
         ),
         SizedBox(height: 16),
         Row(
           children: [
-            _buildStatCard(Icons.build_outlined, "Total Projects", _pioneerHubInfo!.projects.toString()),
+            _buildStatCard(Icons.build_outlined, "Projects", _pioneerHubInfo!.projects.toString()),
             SizedBox(width: 16),
-            _buildStatCard(Icons.person_outlined, "Total Instructors", _pioneerHubInfo!.instructors.toString()),
+            _buildStatCard(Icons.person_outlined, "Instructors", _pioneerHubInfo!.instructors.toString()),
           ],
         ),
         SizedBox(height: 16),
@@ -481,7 +470,7 @@ class _HomePageState extends State<HomePage> {
                                   Icon(Icons.people, size: 14, color: Colors.grey),
                                   SizedBox(width: 4),
                                   Text(
-                                    '${course.studentCount}',
+                                    '${course.studentCount} ${course.instructorId}',
                                     style: TextStyle(fontSize: 12, color: Colors.grey),
                                   ),
                                 ],
@@ -489,11 +478,28 @@ class _HomePageState extends State<HomePage> {
                             ],
                           ),
                           SizedBox(height: 8),
-                          Text(
-                            'By ${course.instructorName}',
-                            style: TextStyle(fontSize: 10, color: Colors.grey),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => InstructorDetailPage(
+                                    instructorId: course.instructorId,
+                                    instructorName: course.instructorName,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              'By ${course.instructorName}',
+                              style: TextStyle(
+                                fontSize: 10, 
+                                color: Colors.indigo,
+                                decoration: TextDecoration.underline,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
@@ -504,86 +510,6 @@ class _HomePageState extends State<HomePage> {
             ),
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildQuickActions() {
-    return Column(
-      children: [
-        _buildActionCard(
-          Icons.school,
-          "My Courses",
-          "View courses you've enrolled in",
-          () => Navigator.push(
-            context, 
-            MaterialPageRoute(builder: (context) => MyCoursesPage())
-          ),
-        ),
-        SizedBox(height: 12),
-        _buildActionCard(
-          Icons.search,
-          "Browse All Courses",
-          "Discover new learning opportunities",
-          () => Navigator.push(
-            context, 
-            MaterialPageRoute(builder: (context) => CoursesPage())
-          ),
-        ),
-        SizedBox(height: 12),
-        if (_loggedInUser?.role == 'instructor')
-          _buildActionCard(
-            Icons.add_circle_outline,
-            "Create a Course",
-            "Start teaching your expertise",
-            () {
-              // Navigate to course creation page
-            },
-          ),
-        if (_loggedInUser?.role == 'employer')
-          _buildActionCard(
-            Icons.work_outline,
-            "Post an Internship",
-            "Find talented students for your company",
-            () {
-              // Navigate to internship posting page
-            },
-          ),
-      ],
-    );
-  }
-
-  Widget _buildActionCard(IconData icon, String title, String subtitle, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Icon(icon, size: 40, color: Colors.indigo),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      subtitle,
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.arrow_forward_ios, color: Colors.indigo),
-            ],
-          ),
-        ),
       ),
     );
   }

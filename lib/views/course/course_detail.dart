@@ -4,6 +4,7 @@ import 'package:pioneerhub_app/controllers/course_controller.dart';
 import 'package:pioneerhub_app/models/course.dart';
 import 'package:pioneerhub_app/models/user.dart';
 import 'package:pioneerhub_app/services/api_service.dart';
+import 'package:pioneerhub_app/views/instructor/instructor_detail.dart';
 
 class CourseDetailPage extends StatefulWidget {
   final Course course;
@@ -103,7 +104,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
               floating: false,
               pinned: true,
               flexibleSpace: FlexibleSpaceBar(
-                title: Padding(padding: EdgeInsets.all(0), child: Text(
+                title: Text(
                   widget.course.title,
                   style: TextStyle(
                     color: Colors.white,
@@ -116,7 +117,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
                       ),
                     ],
                   ),
-                ),),
+                ),
                 background: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -194,7 +195,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
                       ],
                     ),
                     SizedBox(height: 16),
-                    
+                    _buildSectionTitle('Price'),
                     Text(
                       'Rs. ${widget.course.price.toStringAsFixed(2)}',
                       style: TextStyle(
@@ -204,7 +205,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
                       ),
                     ),
                     SizedBox(height: 16),
-                    
+                    _buildSectionTitle('Description'),
                     Text(
                       widget.course.description,
                       style: TextStyle(
@@ -214,46 +215,66 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
                     ),
                     SizedBox(height: 24),
                     _buildSectionTitle('Instructor'),
-                    Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 30,
-                              backgroundColor: Colors.indigo.shade100,
-                              child: Text(
-                                widget.course.instructorName[0].toUpperCase(),
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.indigo,
+                    InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => InstructorDetailPage(
+                              instructorId: widget.course.instructorId,
+                              instructorName: widget.course.instructorName,
+                            ),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            children: [
+                              Hero(
+                                tag: 'instructor-${widget.course.instructorId}',
+                                child: CircleAvatar(
+                                  radius: 30,
+                                  backgroundColor: Colors.indigo.shade100,
+                                  child: Text(
+                                    widget.course.instructorName[0].toUpperCase(),
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.indigo,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                            SizedBox(width: 16),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.course.instructorName,
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      widget.course.instructorName,
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      widget.course.instructorEmail,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Text(
-                                  widget.course.instructorEmail,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[700],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                              ),
+                              Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -305,7 +326,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
                     ),
                     child: _isEnrolling
                         ? CircularProgressIndicator(color: Colors.white)
-                        : Text('Enroll Now - \$${widget.course.price.toStringAsFixed(2)}', style: TextStyle(fontSize: 16)),
+                        : Text('Enroll Now - Rs. ${widget.course.price.toStringAsFixed(2)}', style: TextStyle(fontSize: 16)),
                   ),
       ),
     );
@@ -329,7 +350,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
     return Chip(
       avatar: Icon(icon, size: 16, color: Colors.white),
       label: Text(label, style: TextStyle(
-        color: Colors.white
+        color: Colors.white,
       ),),
       backgroundColor: color.withValues(
         alpha: 50,

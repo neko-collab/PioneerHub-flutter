@@ -40,6 +40,9 @@ dependencies:
   hive: 
   hive_flutter: 
   path_provider:
+  file_picker: ^10.1.2
+  intl: ^0.20.2
+  url_launcher: ^6.3.1
 
 
 dev_dependencies:

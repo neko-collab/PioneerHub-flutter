@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:hive/hive.dart';
 import 'package:pioneerhub_app/controllers/project_controller.dart';
-import 'package:pioneerhub_app/controllers/auth_controller.dart';
 import 'package:pioneerhub_app/models/project.dart';
 import 'package:pioneerhub_app/models/user.dart';
-import 'package:intl/intl.dart';
+import 'package:pioneerhub_app/views/project/project_detail.dart';
 
 class ProjectsPage extends StatefulWidget {
   @override
@@ -13,41 +13,176 @@ class ProjectsPage extends StatefulWidget {
 
 class _ProjectsPageState extends State<ProjectsPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  User? currentUser;
-  bool isLoading = false;
+  User? _loggedInUser;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  bool _isCreatingProject = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _loadUserData();
-    _fetchProjectData();
+    _searchController.addListener(_onSearchChanged);
+    
+    // Fetch projects when the page loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshProjects();
+    });
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text.toLowerCase();
+    });
   }
 
   Future<void> _loadUserData() async {
-    final authController = Provider.of<AuthController>(context, listen: false);
-    currentUser = await authController.getLoggedInUser();
+    var box = Hive.box('authBox');
+    var userJson = box.get('user');
+    if (userJson != null) {
+      setState(() {
+        _loggedInUser = User.fromJson(Map<String, dynamic>.from(userJson));
+      });
+    }
   }
 
-  Future<void> _fetchProjectData() async {
-    setState(() {
-      isLoading = true;
-    });
-    
+  Future<void> _refreshProjects() async {
     final projectController = Provider.of<ProjectController>(context, listen: false);
-    
-    // Load all different project lists
     await projectController.fetchProjects();
     await projectController.fetchUserProjects();
     await projectController.fetchCollaboratingProjects();
+  }
+
+  List<Project> _getFilteredProjects(List<Project> projects) {
+    if (_searchQuery.isEmpty) return projects;
+    
+    return projects.where((project) {
+      return project.title.toLowerCase().contains(_searchQuery) ||
+             project.description.toLowerCase().contains(_searchQuery) ||
+             (project.submitterName?.toLowerCase().contains(_searchQuery) ?? false);
+    }).toList();
+  }
+
+  void _showCreateProjectDialog() {
+    _titleController.clear();
+    _descriptionController.clear();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Create New Project'),
+        content: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _titleController,
+                  decoration: InputDecoration(
+                    labelText: 'Project Title',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a title';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 16),
+                TextFormField(
+                  controller: _descriptionController,
+                  decoration: InputDecoration(
+                    labelText: 'Description',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 5,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a description';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: _isCreatingProject ? null : _createProject,
+            child: _isCreatingProject
+                ? SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _createProject() async {
+    if (_formKey.currentState?.validate() != true) return;
     
     setState(() {
-      isLoading = false;
+      _isCreatingProject = true;
     });
+    
+    try {
+      final projectController = Provider.of<ProjectController>(context, listen: false);
+      final title = _titleController.text;
+      final description = _descriptionController.text;
+      
+      final newProject = await projectController.createProject(title, description);
+      
+      if (newProject != null) {
+        // Close the dialog
+        Navigator.pop(context);
+        
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Project created successfully')),
+        );
+        
+        // Reload projects
+        _refreshProjects();
+        
+        // Switch to My Projects tab
+        _tabController.animateTo(1);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(projectController.error ?? 'Failed to create project')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error creating project: $e')),
+      );
+    } finally {
+      setState(() {
+        _isCreatingProject = false;
+      });
+    }
   }
 
   @override
   void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    _titleController.dispose();
+    _descriptionController.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -57,121 +192,370 @@ class _ProjectsPageState extends State<ProjectsPage> with SingleTickerProviderSt
     return Scaffold(
       appBar: AppBar(
         title: Text('Projects'),
-        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.white,
           tabs: [
             Tab(text: 'All Projects'),
             Tab(text: 'My Projects'),
-            Tab(text: 'Collaborating'),
+            Tab(text: 'Collaborations'),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.add),
+            onPressed: _showCreateProjectDialog,
+            tooltip: 'Create Project',
+          ),
+        ],
       ),
-      body: Consumer<ProjectController>(
-        builder: (context, projectController, child) {
-          if (isLoading) {
-            return Center(child: CircularProgressIndicator());
-          }
-          
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              _buildProjectList(
-                projects: projectController.projects,
-                emptyMessage: 'No projects available',
-                onRefresh: () async => await projectController.fetchProjects(),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search projects...',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                contentPadding: EdgeInsets.symmetric(vertical: 0),
               ),
-              _buildProjectList(
-                projects: projectController.userProjects,
-                emptyMessage: 'You haven\'t created any projects yet',
-                onRefresh: () async => await projectController.fetchUserProjects(),
-              ),
-              _buildProjectList(
-                projects: projectController.collaboratingProjects,
-                emptyMessage: 'You\'re not collaborating on any projects yet',
-                onRefresh: () async => await projectController.fetchCollaboratingProjects(),
-              ),
-            ],
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showCreateProjectDialog(context),
-        child: Icon(Icons.add),
-        backgroundColor: Colors.indigo,
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildAllProjectsTab(),
+                _buildMyProjectsTab(),
+                _buildCollaborationsTab(),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildProjectList({
-    required List<Project> projects,
-    required String emptyMessage,
-    required Future<void> Function() onRefresh,
-  }) {
-    if (projects.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: onRefresh,
-        child: ListView(
-          children: [
-            SizedBox(height: MediaQuery.of(context).size.height / 3),
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.folder_open,
-                    size: 70,
-                    color: Colors.grey[400],
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    emptyMessage,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+  Widget _buildAllProjectsTab() {
+    return Consumer<ProjectController>(
+      builder: (context, projectController, child) {
+        if (projectController.isLoading) {
+          return Center(child: CircularProgressIndicator());
+        }
 
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      child: ListView.builder(
-        padding: EdgeInsets.all(12),
-        itemCount: projects.length,
-        itemBuilder: (context, index) {
-          final project = projects[index];
-          return _buildProjectCard(project);
-        },
-      ),
+        if (projectController.error != null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Error loading projects',
+                  style: TextStyle(fontSize: 18, color: Colors.red),
+                ),
+                SizedBox(height: 8),
+                Text(projectController.error!),
+                SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _refreshProjects,
+                  child: Text('Try Again'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final filteredProjects = _getFilteredProjects(projectController.projects);
+
+        if (filteredProjects.isEmpty) {
+          return Center(
+            child: _searchQuery.isEmpty
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.build_outlined,
+                        size: 80,
+                        color: Colors.grey.shade300,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'No projects yet',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _showCreateProjectDialog,
+                        child: Text('Create a Project'),
+                      ),
+                    ],
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.search_off,
+                        size: 80,
+                        color: Colors.grey.shade300,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'No matching projects found',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: _refreshProjects,
+          child: ListView.builder(
+            padding: EdgeInsets.all(16),
+            itemCount: filteredProjects.length,
+            itemBuilder: (context, index) {
+              final project = filteredProjects[index];
+              return _buildProjectCard(project);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMyProjectsTab() {
+    return Consumer<ProjectController>(
+      builder: (context, projectController, child) {
+        if (projectController.isLoading) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        if (projectController.error != null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Error loading your projects',
+                  style: TextStyle(fontSize: 18, color: Colors.red),
+                ),
+                SizedBox(height: 8),
+                Text(projectController.error!),
+                SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _refreshProjects,
+                  child: Text('Try Again'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final filteredProjects = _getFilteredProjects(projectController.userProjects);
+
+        if (filteredProjects.isEmpty) {
+          return Center(
+            child: _searchQuery.isEmpty
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.build_outlined,
+                        size: 80,
+                        color: Colors.grey.shade300,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'You haven\'t created any projects yet',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _showCreateProjectDialog,
+                        child: Text('Create a Project'),
+                      ),
+                    ],
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.search_off,
+                        size: 80,
+                        color: Colors.grey.shade300,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'No matching projects found',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: _refreshProjects,
+          child: ListView.builder(
+            padding: EdgeInsets.all(16),
+            itemCount: filteredProjects.length,
+            itemBuilder: (context, index) {
+              final project = filteredProjects[index];
+              return _buildProjectCard(project);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCollaborationsTab() {
+    return Consumer<ProjectController>(
+      builder: (context, projectController, child) {
+        if (projectController.isLoading) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        if (projectController.error != null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Error loading collaborations',
+                  style: TextStyle(fontSize: 18, color: Colors.red),
+                ),
+                SizedBox(height: 8),
+                Text(projectController.error!),
+                SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _refreshProjects,
+                  child: Text('Try Again'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final filteredProjects = _getFilteredProjects(projectController.collaboratingProjects);
+
+        if (filteredProjects.isEmpty) {
+          return Center(
+            child: _searchQuery.isEmpty
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.group_outlined,
+                        size: 80,
+                        color: Colors.grey.shade300,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'You\'re not collaborating on any projects yet',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          _tabController.animateTo(0); // Switch to All Projects tab
+                        },
+                        child: Text('Browse Projects'),
+                      ),
+                    ],
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.search_off,
+                        size: 80,
+                        color: Colors.grey.shade300,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'No matching collaborations found',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: _refreshProjects,
+          child: ListView.builder(
+            padding: EdgeInsets.all(16),
+            itemCount: filteredProjects.length,
+            itemBuilder: (context, index) {
+              final project = filteredProjects[index];
+              return _buildProjectCard(project);
+            },
+          ),
+        );
+      },
     );
   }
 
   Widget _buildProjectCard(Project project) {
-    final formattedDate = _formatDate(project.createdAt);
-    final isOwner = currentUser != null && currentUser!.id.toString() == project.submittedBy.toString();
+    bool isOwner = _loggedInUser != null && project.submittedBy == _loggedInUser!.id;
+    bool isCollaborator = false;
+    String collaborationStatus = '';
+    
+    if (project.collaborators != null && _loggedInUser != null) {
+      final userCollaboration = project.collaborators!.firstWhere(
+        (c) => c.id == _loggedInUser!.id,
+        orElse: () => Collaborator(id: -1, name: '', email: '', status: ''),
+      );
+      
+      if (userCollaboration.id != -1) {
+        isCollaborator = userCollaboration.status == 'approved';
+        collaborationStatus = userCollaboration.status;
+      }
+    }
 
     return Card(
       margin: EdgeInsets.only(bottom: 16),
+      elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      elevation: 2,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
         onTap: () {
-          Navigator.pushNamed(
-            context, 
-            '/project-detail',
-            arguments: {'projectId': project.id},
-          ).then((_) => _fetchProjectData());
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ProjectDetailPage(projectId: project.id),
+            ),
+          ).then((_) => _refreshProjects());
         },
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -201,73 +585,90 @@ class _ProjectsPageState extends State<ProjectsPage> with SingleTickerProviderSt
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         SizedBox(height: 4),
-                        Text(
-                          'Created by ${project.submitterName ?? "Unknown"}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
+                        Row(
+                          children: [
+                            Icon(Icons.person, size: 16, color: Colors.grey),
+                            SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                project.submitterName ?? 'Unknown',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[700],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.calendar_today, size: 16, color: Colors.grey),
+                            SizedBox(width: 4),
+                            Text(
+                              _formatDate(project.createdAt),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                  if (isOwner)
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.indigo.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        'Owner',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.indigo,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                  if (isOwner || isCollaborator || collaborationStatus.isNotEmpty)
+                    _buildStatusBadge(isOwner, isCollaborator, collaborationStatus),
                 ],
               ),
               SizedBox(height: 12),
               Text(
                 project.description,
+                style: TextStyle(fontSize: 14),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[800],
-                ),
               ),
-              SizedBox(height: 16),
+              SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        Icons.people_outline,
-                        size: 16,
-                        color: Colors.grey[600],
-                      ),
+                      Icon(Icons.people, size: 16, color: Colors.indigo),
                       SizedBox(width: 4),
                       Text(
-                        '${project.collaboratorCount} Collaborator${project.collaboratorCount != 1 ? 's' : ''}',
+                        '${project.collaboratorCount} collaborator${project.collaboratorCount != 1 ? 's' : ''}',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
+                          fontSize: 14,
+                          color: Colors.indigo,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
-                  Text(
-                    formattedDate,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
+                  OutlinedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProjectDetailPage(projectId: project.id),
+                        ),
+                      ).then((_) => _refreshProjects());
+                    },
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.indigo),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     ),
+                    child: Text('View Details'),
                   ),
                 ],
               ),
@@ -278,118 +679,80 @@ class _ProjectsPageState extends State<ProjectsPage> with SingleTickerProviderSt
     );
   }
 
-  void _showCreateProjectDialog(BuildContext context) {
-    final titleController = TextEditingController();
-    final descriptionController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    bool isSubmitting = false;
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: Text('Create New Project'),
-            content: Form(
-              key: formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: titleController,
-                      decoration: InputDecoration(
-                        labelText: 'Title',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a project title';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    TextFormField(
-                      controller: descriptionController,
-                      decoration: InputDecoration(
-                        labelText: 'Description',
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLines: 5,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a project description';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: isSubmitting
-                    ? null
-                    : () async {
-                        if (formKey.currentState!.validate()) {
-                          setState(() {
-                            isSubmitting = true;
-                          });
-
-                          try {
-                            final projectController =
-                                Provider.of<ProjectController>(context, listen: false);
-                            
-                            final project = await projectController.createProject(
-                              titleController.text,
-                              descriptionController.text,
-                            );
-
-                            Navigator.pop(context);
-                            
-                            if (project != null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Project created successfully')),
-                              );
-                              _fetchProjectData();
-                            }
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Failed to create project: $e')),
-                            );
-                          }
-                        }
-                      },
-                child: isSubmitting
-                    ? SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : Text('Create'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
+  Widget _buildStatusBadge(bool isOwner, bool isCollaborator, String status) {
+    if (isOwner) {
+      return Container(
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.indigo.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          'Owner',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.indigo,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    } else if (isCollaborator) {
+      return Container(
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.green.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          'Collaborator',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.green,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    } else if (status == 'pending') {
+      return Container(
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.orange.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          'Pending',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.orange,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    } else if (status == 'rejected') {
+      return Container(
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.red.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          'Rejected',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.red,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    }
+    
+    return SizedBox.shrink();
   }
 
   String _formatDate(String dateString) {
     try {
       final date = DateTime.parse(dateString);
-      return DateFormat('MMM d, yyyy').format(date);
+      return "${date.day}/${date.month}/${date.year}";
     } catch (e) {
       return dateString;
     }

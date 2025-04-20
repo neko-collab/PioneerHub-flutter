@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:pioneerhub_app/controllers/internship_controller.dart';
-import 'package:pioneerhub_app/models/internship.dart';
+import 'package:pioneerhub_app/controllers/job_controller.dart';
+import 'package:pioneerhub_app/models/job.dart';
 import 'package:pioneerhub_app/models/user.dart';
 import 'package:pioneerhub_app/services/api_service.dart';
 import 'package:hive/hive.dart';
-import 'package:pioneerhub_app/views/internship/internship-detail.dart';
-import 'package:pioneerhub_app/views/internship/my-applications.dart';
+import 'package:pioneerhub_app/views/job/job_detail.dart';
+import 'package:pioneerhub_app/views/job/my_job_applications.dart';
 
-class InternshipsPage extends StatefulWidget {
+class JobsPage extends StatefulWidget {
   @override
-  _InternshipsPageState createState() => _InternshipsPageState();
+  _JobsPageState createState() => _JobsPageState();
 }
 
-class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProviderStateMixin {
-  final InternshipController _internshipController = InternshipController(apiService: ApiService());
+class _JobsPageState extends State<JobsPage> with SingleTickerProviderStateMixin {
+  final JobController _jobController = JobController(apiService: ApiService());
   late TabController _tabController;
-  List<Internship> _internships = [];
-  List<Internship> _filteredInternships = [];
+  List<Job> _jobs = [];
+  List<Job> _filteredJobs = [];
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
   User? _loggedInUser;
@@ -26,8 +26,8 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadUser();
-    _fetchInternships();
-    _searchController.addListener(_filterInternships);
+    _fetchJobs();
+    _searchController.addListener(_filterJobs);
   }
 
   Future<void> _loadUser() async {
@@ -40,17 +40,17 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
     }
   }
 
-  Future<void> _fetchInternships() async {
+  Future<void> _fetchJobs() async {
     setState(() {
       _isLoading = true;
     });
     
     try {
-      final internships = await _internshipController.listInternships();
+      final jobs = await _jobController.listJobs();
       
       setState(() {
-        _internships = internships;
-        _filteredInternships = internships;
+        _jobs = jobs;
+        _filteredJobs = jobs;
         _isLoading = false;
       });
     } catch (e) {
@@ -58,19 +58,19 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load internships: $e')),
+        SnackBar(content: Text('Failed to load jobs: $e')),
       );
     }
   }
 
-  void _filterInternships() {
+  void _filterJobs() {
     final query = _searchController.text.toLowerCase();
     setState(() {
-      _filteredInternships = _internships.where((internship) {
-        return internship.title.toLowerCase().contains(query) ||
-               internship.description.toLowerCase().contains(query) ||
-               internship.company.toLowerCase().contains(query) ||
-               internship.location.toLowerCase().contains(query);
+      _filteredJobs = _jobs.where((job) {
+        return job.title.toLowerCase().contains(query) ||
+               job.description.toLowerCase().contains(query) ||
+               job.company.toLowerCase().contains(query) ||
+               job.location.toLowerCase().contains(query);
       }).toList();
     });
   }
@@ -86,7 +86,7 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Internships'),
+        title: Text('Jobs'),
         bottom: _loggedInUser?.role == 'user' 
           ? TabBar(
               controller: _tabController,
@@ -101,9 +101,9 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
             IconButton(
               icon: Icon(Icons.add),
               onPressed: () {
-                // Navigate to add internship page
+                // Navigate to add job page
               },
-              tooltip: 'Add Internship',
+              tooltip: 'Add Job',
             ),
         ],
       ),
@@ -111,15 +111,15 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
         ? TabBarView(
             controller: _tabController,
             children: [
-              _buildInternshipsTab(),
-              MyApplicationsPage(),
+              _buildJobsTab(),
+              MyJobApplicationsPage(),
             ],
           )
-        : _buildInternshipsTab(),
+        : _buildJobsTab(),
     );
   }
 
-  Widget _buildInternshipsTab() {
+  Widget _buildJobsTab() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -127,7 +127,7 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              labelText: 'Search Internships',
+              labelText: 'Search Jobs',
               prefixIcon: Icon(Icons.search),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -137,7 +137,7 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
           SizedBox(height: 16),
           _isLoading
               ? Expanded(child: Center(child: CircularProgressIndicator()))
-              : _filteredInternships.isEmpty
+              : _filteredJobs.isEmpty
                   ? Expanded(
                       child: Center(
                         child: Column(
@@ -150,7 +150,7 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
                             ),
                             SizedBox(height: 16),
                             Text(
-                              'No internships found',
+                              'No jobs found',
                               style: TextStyle(
                                 fontSize: 18,
                                 color: Colors.grey[700],
@@ -162,12 +162,12 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
                     )
                   : Expanded(
                       child: RefreshIndicator(
-                        onRefresh: _fetchInternships,
+                        onRefresh: _fetchJobs,
                         child: ListView.builder(
-                          itemCount: _filteredInternships.length,
+                          itemCount: _filteredJobs.length,
                           itemBuilder: (context, index) {
-                            final internship = _filteredInternships[index];
-                            return _buildInternshipCard(internship);
+                            final job = _filteredJobs[index];
+                            return _buildJobCard(job);
                           },
                         ),
                       ),
@@ -177,7 +177,7 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
     );
   }
 
-  Widget _buildInternshipCard(Internship internship) {
+  Widget _buildJobCard(Job job) {
     return Card(
       elevation: 4,
       margin: EdgeInsets.only(bottom: 16),
@@ -187,9 +187,9 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => InternshipDetailPage(internship: internship),
+              builder: (context) => JobDetailPage(job: job),
             ),
-          ).then((_) => _fetchInternships());
+          ).then((_) => _fetchJobs());
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,7 +197,7 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
             Container(
               height: 8,
               decoration: BoxDecoration(
-                color: _getInternshipTypeColor(internship.internshipType),
+                color: _getJobTypeColor(job.jobType),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(12),
                   topRight: Radius.circular(12),
@@ -214,11 +214,11 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
                     children: [
                       CircleAvatar(
                         radius: 30,
-                        backgroundColor: _getInternshipTypeColor(internship.internshipType).withOpacity(0.2),
+                        backgroundColor: _getJobTypeColor(job.jobType).withOpacity(0.2),
                         child: Icon(
                           Icons.business,
                           size: 30,
-                          color: _getInternshipTypeColor(internship.internshipType),
+                          color: _getJobTypeColor(job.jobType),
                         ),
                       ),
                       SizedBox(width: 16),
@@ -227,7 +227,7 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              internship.title,
+                              job.title,
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -235,7 +235,7 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
                             ),
                             SizedBox(height: 4),
                             Text(
-                              internship.company,
+                              job.company,
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
@@ -249,7 +249,7 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
                                 SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
-                                    internship.location,
+                                    job.location,
                                     style: TextStyle(
                                       fontSize: 14,
                                       color: Colors.grey[700],
@@ -264,11 +264,11 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
                       Container(
                         padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: _getInternshipTypeColor(internship.internshipType),
+                          color: _getJobTypeColor(job.jobType),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
-                          _getInternshipTypeText(internship.internshipType),
+                          _getJobTypeText(job.jobType),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -280,7 +280,7 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
                   ),
                   SizedBox(height: 16),
                   Text(
-                    internship.description,
+                    job.description,
                     style: TextStyle(fontSize: 14),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
@@ -294,7 +294,7 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
                           Icon(Icons.calendar_today_outlined, size: 16, color: Colors.grey),
                           SizedBox(width: 4),
                           Text(
-                            _formatDate(internship.createdAt),
+                            _formatDate(job.createdAt),
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[700],
@@ -308,12 +308,12 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => InternshipDetailPage(internship: internship),
+                                builder: (context) => JobDetailPage(job: job),
                               ),
                             );
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _getInternshipTypeColor(internship.internshipType),
+                            backgroundColor: _getJobTypeColor(job.jobType),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
@@ -331,22 +331,24 @@ class _InternshipsPageState extends State<InternshipsPage> with SingleTickerProv
     );
   }
 
-  Color _getInternshipTypeColor(String type) {
+  Color _getJobTypeColor(String type) {
     switch (type.toLowerCase()) {
-      case 'paid':
+      case 'full-time':
         return Colors.green;
-      case 'unpaid':
+      case 'part-time':
         return Colors.orange;
-      case 'remote':
+      case 'contract':
         return Colors.blue;
-      case 'hybrid':
+      case 'freelance':
         return Colors.purple;
+      case 'remote':
+        return Colors.teal;
       default:
         return Colors.indigo;
     }
   }
 
-  String _getInternshipTypeText(String type) {
+  String _getJobTypeText(String type) {
     return type.toUpperCase();
   }
 

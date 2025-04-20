@@ -3,7 +3,6 @@ import 'package:pioneerhub_app/controllers/course_controller.dart';
 import 'package:pioneerhub_app/models/course.dart';
 import 'package:pioneerhub_app/services/api_service.dart';
 import 'package:pioneerhub_app/views/course/course_detail.dart';
-import 'package:pioneerhub_app/views/course/my-courses.dart';
 
 class CoursesPage extends StatefulWidget {
   @override
@@ -14,6 +13,7 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
   final CourseController _courseController = CourseController(apiService: ApiService());
   List<Course> _courses = [];
   List<Course> _trendingCourses = [];
+  List<Course> _enrolledCourses = [];
   List<Course> _filteredCourses = [];
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
@@ -22,7 +22,7 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _fetchCourses();
     _searchController.addListener(_filterCourses);
   }
@@ -33,13 +33,17 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
     });
     
     try {
-      final courses = await _courseController.listCourses();
-      final trendingCourses = await _courseController.listTrendingCourses();
+      final results = await Future.wait([
+        _courseController.listCourses(),
+        _courseController.listTrendingCourses(),
+        _courseController.myEnrolledCourses(),
+      ]);
       
       setState(() {
-        _courses = courses;
-        _filteredCourses = courses;
-        _trendingCourses = trendingCourses;
+        _courses = results[0];
+        _filteredCourses = results[0];
+        _trendingCourses = results[1];
+        _enrolledCourses = results[2];
         _isLoading = false;
       });
     } catch (e) {
@@ -85,18 +89,6 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.school, color: Colors.indigo),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => MyCoursesPage()),
-              );
-            },
-            tooltip: 'My Enrolled Courses',
-          ),
-        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.indigo,
@@ -105,6 +97,7 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
           tabs: [
             Tab(text: 'All Courses'),
             Tab(text: 'Trending Courses'),
+            Tab(text: 'My Courses'),
           ],
         ),
       ),
@@ -147,6 +140,7 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
                       children: [
                         _buildCoursesList(_filteredCourses),
                         _buildCoursesList(_trendingCourses),
+                        _buildEnrolledCoursesList(_enrolledCourses),
                       ],
                     ),
                   ),
@@ -337,6 +331,189 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
                               ),
                             ],
                           ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEnrolledCoursesList(List<Course> courses) {
+    if (courses.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.school_outlined,
+              size: 80,
+              color: Colors.grey.shade300,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'You haven\'t enrolled in any courses yet',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                _tabController.animateTo(0); // Navigate to All Courses tab
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.indigo,
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: Text('Browse Courses'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _fetchCourses,
+      color: Colors.indigo,
+      child: ListView.builder(
+        physics: BouncingScrollPhysics(),
+        itemCount: courses.length,
+        itemBuilder: (context, index) {
+          final course = courses[index];
+          return Card(
+            elevation: 3,
+            margin: EdgeInsets.only(bottom: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CourseDetailPage(course: course),
+                  ),
+                ).then((_) => _fetchCourses()); // Refresh after returning
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: Colors.green, // Different color for enrolled courses
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 70,
+                          height: 70,
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50, // Green tint for enrolled courses
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              course.title[0].toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green, // Green text
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                course.title,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green.shade800, // Green text for enrolled courses
+                                ),
+                              ),
+                              SizedBox(height: 6),
+                              Text(
+                                course.description,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[700],
+                                  height: 1.3,
+                                ),
+                              ),
+                              SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Icon(Icons.person, size: 16, color: Colors.grey),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    course.instructorName,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(height: 1, thickness: 1, color: Colors.grey.shade200),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.calendar_today, size: 16, color: Colors.grey),
+                            SizedBox(width: 4),
+                            Text(
+                              'Enrolled',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[700],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                         
                         ),
                       ],
                     ),
