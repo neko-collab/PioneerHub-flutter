@@ -198,7 +198,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                     ? CircularProgressIndicator(color: Colors.white)
                     : Text(
                         'Change Password',
-                        style: TextStyle(fontSize: 16),
+                        style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
                 ),
               ],

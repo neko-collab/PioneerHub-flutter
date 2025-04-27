@@ -31,18 +31,25 @@ class ProjectController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Using direct GET endpoint as specified in your backend
       final response = await apiService.get('/projects.php');
+      
+      print('Fetching all projects response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+      
       final data = json.decode(response.body);
-      print(data);
-      if (data['status'] == 'success') {
+      if (data['status'] == 'success' || data['status'] == 200) {
         _projects = List<Project>.from(
           data['data'].map((x) => Project.fromJson(x))
         );
+        print('Projects loaded successfully: ${_projects.length} projects');
       } else {
-        _error = data['message'];
+        _error = data['message'] ?? 'Failed to fetch projects';
+        print('Error from server: $_error');
       }
     } catch (e) {
-      _error = e.toString();
+      print('Exception when fetching projects: $e');
+      _error = 'Network error: ${e.toString()}';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -62,16 +69,20 @@ class ProjectController extends ChangeNotifier {
         'id': projectId,
       });
       
+      // Debug output to find issues
+      print('Fetching project details response for ID $projectId: ${response.body}');
+      
       final data = json.decode(response.body);
       
-      if (data['status'] == 'success') {
+      if (data['status'] == 'success' || data['status'] == 200) {
         _currentProject = Project.fromJson(data['data']);
         return _currentProject;
       } else {
-        _error = data['message'];
+        _error = data['message'] ?? 'Failed to fetch project details';
         return null;
       }
     } catch (e) {
+      print('Error fetching project details: $e');
       _error = e.toString();
       return null;
     } finally {
@@ -297,16 +308,20 @@ class ProjectController extends ChangeNotifier {
         'action': 'listUserProjects',
       });
       
+      // Debug output to find issues
+      print('Fetching user projects response: ${response.body}');
+      
       final data = json.decode(response.body);
       
-      if (data['status'] == 'success') {
+      if (data['status'] == 'success' || data['status'] == 200) {
         _userProjects = List<Project>.from(
           data['data'].map((x) => Project.fromJson(x))
         );
       } else {
-        _error = data['message'];
+        _error = data['message'] ?? 'Failed to fetch user projects';
       }
     } catch (e) {
+      print('Error fetching user projects: $e');
       _error = e.toString();
     } finally {
       _isLoading = false;
@@ -325,16 +340,20 @@ class ProjectController extends ChangeNotifier {
         'action': 'listCollaboratingProjects',
       });
       
+      // Debug output to find issues
+      print('Fetching collaborating projects response: ${response.body}');
+      
       final data = json.decode(response.body);
       
-      if (data['status'] == 'success') {
+      if (data['status'] == 'success' || data['status'] == 200) {
         _collaboratingProjects = List<Project>.from(
           data['data'].map((x) => Project.fromJson(x))
         );
       } else {
-        _error = data['message'];
+        _error = data['message'] ?? 'Failed to fetch collaboration projects';
       }
     } catch (e) {
+      print('Error fetching collaborating projects: $e');
       _error = e.toString();
     } finally {
       _isLoading = false;

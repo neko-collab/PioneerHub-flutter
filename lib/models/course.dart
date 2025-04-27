@@ -32,8 +32,8 @@ class Course {
       instructorId: json['instructor_id'],
       isTrending: json['is_trending'] == 1,
       createdAt: json['created_at'],
-      instructorName: json['instructor_name'],
-      instructorEmail: json['instructor_email'],
+      instructorName: json['instructor_name'] ?? '',
+      instructorEmail: json['instructor_email'] ?? '',
       studentCount: json['student_count'] ?? 0,
     );
   }
@@ -51,5 +51,58 @@ class Course {
       'instructor_email': instructorEmail,
       'student_count': studentCount,
     };
+  }
+}
+
+class CourseStudent {
+  final int id;
+  final String name;
+  final String email;
+  final bool verified;
+  final String? registeredAt;
+
+  CourseStudent({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.verified,
+    this.registeredAt,
+  });
+
+  factory CourseStudent.fromJson(Map<String, dynamic> json) {
+    return CourseStudent(
+      id: json['id'],
+      name: json['name'],
+      email: json['email'],
+      verified: json['verified'] == 1,
+      registeredAt: json['registered_at'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'verified': verified ? 1 : 0,
+      'registered_at': registeredAt,
+    };
+  }
+}
+
+class InstructorCoursesResponse {
+  final Map<String, dynamic>? instructor;
+  final List<Course> courses;
+
+  InstructorCoursesResponse({
+    this.instructor,
+    required this.courses,
+  });
+
+  factory InstructorCoursesResponse.fromJson(Map<String, dynamic> json) {
+    return InstructorCoursesResponse(
+      instructor: json['instructor'],
+      courses: (json['courses'] as List).map((course) => Course.fromJson(course)).toList(),
+    );
   }
 }

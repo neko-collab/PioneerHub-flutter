@@ -20,6 +20,7 @@ class _ProjectsPageState extends State<ProjectsPage> with SingleTickerProviderSt
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   bool _isCreatingProject = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -51,10 +52,34 @@ class _ProjectsPageState extends State<ProjectsPage> with SingleTickerProviderSt
   }
 
   Future<void> _refreshProjects() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     final projectController = Provider.of<ProjectController>(context, listen: false);
-    await projectController.fetchProjects();
-    await projectController.fetchUserProjects();
-    await projectController.fetchCollaboratingProjects();
+    
+    try {
+      // Load all three project lists in parallel
+      await Future.wait([
+        projectController.fetchProjects(),
+        projectController.fetchUserProjects(),
+        projectController.fetchCollaboratingProjects()
+      ]);
+      
+      print('Projects refreshed: ${projectController.projects.length} all projects, ' +
+            '${projectController.userProjects.length} user projects, ' +
+            '${projectController.collaboratingProjects.length} collaborations');
+      
+    } catch (e) {
+      print('Error refreshing projects: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error refreshing projects: $e')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   List<Project> _getFilteredProjects(List<Project> projects) {
@@ -542,18 +567,22 @@ class _ProjectsPageState extends State<ProjectsPage> with SingleTickerProviderSt
 
     return Card(
       margin: EdgeInsets.only(bottom: 16),
-      elevation: 2,
+      elevation: 3,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
       child: InkWell(
         onTap: () {
+          print('Navigating to project details for ID: ${project.id}');
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => ProjectDetailPage(projectId: project.id),
             ),
-          ).then((_) => _refreshProjects());
+          ).then((_) {
+            print('Returned from project details, refreshing projects');
+            _refreshProjects();
+          });
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -567,7 +596,7 @@ class _ProjectsPageState extends State<ProjectsPage> with SingleTickerProviderSt
                   CircleAvatar(
                     backgroundColor: Colors.indigo.shade100,
                     child: Text(
-                      project.title[0].toUpperCase(),
+                      project.title.isNotEmpty ? project.title[0].toUpperCase() : '?',
                       style: TextStyle(
                         color: Colors.indigo,
                         fontWeight: FontWeight.bold,
@@ -654,6 +683,7 @@ class _ProjectsPageState extends State<ProjectsPage> with SingleTickerProviderSt
                   ),
                   OutlinedButton(
                     onPressed: () {
+                      print('View Details button pressed for project ID: ${project.id}');
                       Navigator.push(
                         context,
                         MaterialPageRoute(

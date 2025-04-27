@@ -129,7 +129,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     ? CircularProgressIndicator(color: Colors.white)
                     : Text(
                         'Send OTP',
-                        style: TextStyle(fontSize: 16),
+                        style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
                 ),
                 const SizedBox(height: 20),

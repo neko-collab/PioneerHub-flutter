@@ -5,6 +5,7 @@ import 'package:pioneerhub_app/models/user.dart';
 import 'package:pioneerhub_app/services/api_service.dart';
 import 'package:pioneerhub_app/views/auth/login.dart';
 import 'package:pioneerhub_app/views/course/courses.dart';
+import 'package:pioneerhub_app/views/course/instructor_courses_view.dart';
 import 'package:pioneerhub_app/views/internship/internships.dart';
 import 'package:pioneerhub_app/views/job/jobs.dart';
 import 'package:pioneerhub_app/views/project/projects.dart';
@@ -204,6 +205,15 @@ class _ProfilePageState extends State<ProfilePage> {
                             color: Colors.purple,
                             onTap: () {
                               _navigateToApplications(context, 1, ProjectsPage());
+                            },
+                          ),
+                        if (_loggedInUser!.role == 'instructor')
+                          _buildApplicationTile(
+                            icon: Icons.menu_book_outlined,
+                            title: 'My Teaching Courses',
+                            color: Colors.blue,
+                            onTap: () {
+                              _navigateToApplications(context, 1, InstructorCoursesView());
                             },
                           ),
                         SizedBox(height: 24),

@@ -5,8 +5,6 @@ import 'package:pioneerhub_app/views/auth/change_password.dart';
 import 'package:pioneerhub_app/views/auth/checkotp.dart';
 import 'package:pioneerhub_app/views/auth/forgot_password.dart';
 import 'package:pioneerhub_app/views/auth/login.dart';
-import 'package:pioneerhub_app/views/auth/register-admin.dart';
-import 'package:pioneerhub_app/views/auth/register-employer.dart';
 import 'package:pioneerhub_app/views/auth/register-instructor.dart';
 import 'package:pioneerhub_app/views/auth/register-select.dart';
 import 'package:pioneerhub_app/views/auth/register.dart';
@@ -27,6 +25,7 @@ import 'package:pioneerhub_app/controllers/user_controller.dart';
 import 'package:pioneerhub_app/controllers/project_controller.dart';
 import 'package:pioneerhub_app/services/api_service.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:khalti_flutter/khalti_flutter.dart';
 
 void main() async {
   await Hive.initFlutter();
@@ -49,91 +48,99 @@ class PioneerApp extends StatelessWidget {
           create: (_) => ProjectController(apiService: ApiService()),
         ),
       ],
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'PioneerHub',
-        theme: ThemeData(
-          primarySwatch: Colors.indigo,
-        ),
-        initialRoute: '/',
-        routes: {
-          // Auth routes
-          '/': (context) => LoginPage(),
-          '/register': (context) => SignUpPage(),
-          '/register-select': (context) => RegisterSelectPage(),
-          '/register-instructor': (context) => RegisterInstructorPage(),
-          '/register-employer': (context) => RegisterEmployerPage(),
-          '/register-admin': (context) => RegisterAdminPage(),
-          '/forgot_password': (context) => ForgotPasswordPage(),
+      child: KhaltiScope(
+        publicKey: 'test_public_key_5ee53829f5614430864cc41412c44cb6',
+        enabledDebugging: true,
+        builder: (context, navKey) {
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'PioneerHub',
+            theme: ThemeData(
+              primarySwatch: Colors.indigo,
+            ),
+            initialRoute: '/',
+            navigatorKey: navKey,
+            localizationsDelegates: const [KhaltiLocalizations.delegate],
+            routes: {
+              // Auth routes
+              '/': (context) => LoginPage(),
+              '/register': (context) => SignUpPage(),
+              '/register-select': (context) => RegisterSelectPage(),
+              '/register-instructor': (context) => RegisterInstructorPage(),
+              '/forgot_password': (context) => ForgotPasswordPage(),
 
-          // Main app routes
-          '/home': (context) => MainScreen(),
-          '/profile': (context) => ProfilePage(),
+              // Main app routes
+              '/home': (context) => MainScreen(),
+              '/profile': (context) => ProfilePage(),
 
-          // Course routes
-          '/courses': (context) => CoursesPage(),
-          
-          // Internship routes
-          '/internships': (context) => InternshipsPage(),
-          '/my-applications': (context) => MyApplicationsPage(),
-          
-          // Job routes
-          '/jobs': (context) => JobsPage(),
-          '/my-job-applications': (context) => MyJobApplicationsPage(),
-        },
-        // Use onGenerateRoute for routes that need parameters
-        onGenerateRoute: (settings) {
-          if (settings.name == '/course-detail') {
-            final args = settings.arguments as Map<String, dynamic>;
-            return MaterialPageRoute(
-              builder: (context) => CourseDetailPage(
-                course: args['course'],
-              ),
-            );
-          } else if (settings.name == '/internship-detail') {
-            final args = settings.arguments as Map<String, dynamic>;
-            return MaterialPageRoute(
-              builder: (context) => InternshipDetailPage(
-                internship: args['internship'],
-              ),
-            );
-          } else if (settings.name == '/change_password') {
-            final args = settings.arguments as Map<String, dynamic>;
-            return MaterialPageRoute(
-              builder: (context) => ChangePasswordPage(
-                email: args['email'],
-                otp: args['otp'],
-              ),
-            );
-          } else if (settings.name == '/checkotp') {
-            final args = settings.arguments as Map<String, dynamic>;
-            return MaterialPageRoute(
-              builder: (context) => OtpVerificationPage(
-                email: args['email'],
-              ),
-            );
-          } else if (settings.name == '/job-detail') {
-            final args = settings.arguments as Map<String, dynamic>;
-            return MaterialPageRoute(
-              builder: (context) => JobDetailPage(
-                job: args['job'],
-              ),
-            );
-          } else if (settings.name == '/project-detail') {
-            final args = settings.arguments as Map<String, dynamic>;
-            return MaterialPageRoute(
-              builder: (context) => ProjectDetailPage(
-                projectId: args['projectId'],
-              ),
-            );
-          }
-          return null;
+              // Course routes
+              '/courses': (context) => CoursesPage(),
+
+              // Project routes
+              '/projects': (context) => ProjectsPage(),
+              
+              // Internship routes
+              '/internships': (context) => InternshipsPage(),
+              '/my-applications': (context) => MyApplicationsPage(),
+              
+              // Job routes
+              '/jobs': (context) => JobsPage(),
+              '/my-job-applications': (context) => MyJobApplicationsPage(),
+            },
+            // Use onGenerateRoute for routes that need parameters
+            onGenerateRoute: (settings) {
+              if (settings.name == '/course-detail') {
+                final args = settings.arguments as Map<String, dynamic>;
+                return MaterialPageRoute(
+                  builder: (context) => CourseDetailPage(
+                    course: args['course'],
+                  ),
+                );
+              } else if (settings.name == '/internship-detail') {
+                final args = settings.arguments as Map<String, dynamic>;
+                return MaterialPageRoute(
+                  builder: (context) => InternshipDetailPage(
+                    internship: args['internship'],
+                  ),
+                );
+              } else if (settings.name == '/change_password') {
+                final args = settings.arguments as Map<String, dynamic>;
+                return MaterialPageRoute(
+                  builder: (context) => ChangePasswordPage(
+                    email: args['email'],
+                    otp: args['otp'],
+                  ),
+                );
+              } else if (settings.name == '/checkotp') {
+                final args = settings.arguments as Map<String, dynamic>;
+                return MaterialPageRoute(
+                  builder: (context) => OtpVerificationPage(
+                    email: args['email'],
+                  ),
+                );
+              } else if (settings.name == '/job-detail') {
+                final args = settings.arguments as Map<String, dynamic>;
+                return MaterialPageRoute(
+                  builder: (context) => JobDetailPage(
+                    job: args['job'],
+                  ),
+                );
+              } else if (settings.name == '/project-detail') {
+                final args = settings.arguments as Map<String, dynamic>;
+                return MaterialPageRoute(
+                  builder: (context) => ProjectDetailPage(
+                    projectId: args['projectId'],
+                  ),
+                );
+              }
+              return null;
+            },
+          );
         },
       ),
     );
   }
 }
-
 class MainScreen extends StatefulWidget {
   @override
   _MainScreenState createState() => _MainScreenState();

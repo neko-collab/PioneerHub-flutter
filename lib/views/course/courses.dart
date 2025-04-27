@@ -1,44 +1,61 @@
 import 'package:flutter/material.dart';
 import 'package:pioneerhub_app/controllers/course_controller.dart';
+import 'package:pioneerhub_app/controllers/auth_controller.dart';
 import 'package:pioneerhub_app/models/course.dart';
 import 'package:pioneerhub_app/services/api_service.dart';
 import 'package:pioneerhub_app/views/course/course_detail.dart';
+import 'package:pioneerhub_app/views/course/instructor_courses_view.dart';
+import 'package:pioneerhub_app/views/instructor/instructor_detail.dart';
 
 class CoursesPage extends StatefulWidget {
   @override
   _CoursesPageState createState() => _CoursesPageState();
 }
 
-class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStateMixin {
-  final CourseController _courseController = CourseController(apiService: ApiService());
+class _CoursesPageState extends State<CoursesPage>
+    with SingleTickerProviderStateMixin {
+  final CourseController _courseController = CourseController(
+    apiService: ApiService(),
+  );
+  final AuthController _authController = AuthController(
+    apiService: ApiService(),
+  );
   List<Course> _courses = [];
   List<Course> _trendingCourses = [];
   List<Course> _enrolledCourses = [];
   List<Course> _filteredCourses = [];
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
+  bool _isInstructor = false;
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _checkUserRole();
     _tabController = TabController(length: 3, vsync: this);
     _fetchCourses();
     _searchController.addListener(_filterCourses);
+  }
+
+  void _checkUserRole() {
+    setState(() {
+      _isInstructor = _authController.isInstructor();
+    });
   }
 
   Future<void> _fetchCourses() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final results = await Future.wait([
         _courseController.listCourses(),
         _courseController.listTrendingCourses(),
         _courseController.myEnrolledCourses(),
       ]);
-      
+
       setState(() {
         _courses = results[0];
         _filteredCourses = results[0];
@@ -62,11 +79,12 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
   void _filterCourses() {
     final query = _searchController.text.toLowerCase();
     setState(() {
-      _filteredCourses = _courses.where((course) {
-        return course.title.toLowerCase().contains(query) ||
-               course.description.toLowerCase().contains(query) ||
-               course.instructorName.toLowerCase().contains(query);
-      }).toList();
+      _filteredCourses =
+          _courses.where((course) {
+            return course.title.toLowerCase().contains(query) ||
+                course.description.toLowerCase().contains(query) ||
+                course.instructorName.toLowerCase().contains(query);
+          }).toList();
     });
   }
 
@@ -89,6 +107,21 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          if (_isInstructor)
+            IconButton(
+              icon: Icon(Icons.school, color: Colors.indigo),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => InstructorCoursesView(),
+                  ),
+                ).then((_) => _fetchCourses());
+              },
+              tooltip: 'My Teaching Courses',
+            ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.indigo,
@@ -97,7 +130,7 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
           tabs: [
             Tab(text: 'All Courses'),
             Tab(text: 'Trending Courses'),
-            Tab(text: 'My Courses'),
+            Tab(text: _isInstructor ? 'My Enrolled Courses' : 'My Courses'),
           ],
         ),
       ),
@@ -130,20 +163,20 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
             SizedBox(height: 20),
             _isLoading
                 ? Expanded(
-                    child: Center(
-                      child: CircularProgressIndicator(color: Colors.indigo),
-                    ),
-                  )
-                : Expanded(
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: [
-                        _buildCoursesList(_filteredCourses),
-                        _buildCoursesList(_trendingCourses),
-                        _buildEnrolledCoursesList(_enrolledCourses),
-                      ],
-                    ),
+                  child: Center(
+                    child: CircularProgressIndicator(color: Colors.indigo),
                   ),
+                )
+                : Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildCoursesList(_filteredCourses),
+                      _buildCoursesList(_trendingCourses),
+                      _buildEnrolledCoursesList(_enrolledCourses),
+                    ],
+                  ),
+                ),
           ],
         ),
       ),
@@ -156,11 +189,7 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.school_outlined,
-              size: 80,
-              color: Colors.grey.shade300,
-            ),
+            Icon(Icons.school_outlined, size: 80, color: Colors.grey.shade300),
             SizedBox(height: 16),
             Text(
               'No courses found',
@@ -262,13 +291,36 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
                               SizedBox(height: 10),
                               Row(
                                 children: [
-                                  Icon(Icons.person, size: 16, color: Colors.grey),
+                                  Icon(
+                                    Icons.person,
+                                    size: 16,
+                                    color: Colors.grey,
+                                  ),
                                   SizedBox(width: 4),
-                                  Text(
-                                    course.instructorName,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey[700],
+                                  InkWell(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (context) => InstructorDetailPage(
+                                                instructorId:
+                                                    course.instructorId,
+                                                instructorName:
+                                                    course.instructorName,
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                    child: Text(
+                                      'By ${course.instructorName}',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.indigo,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
@@ -281,7 +333,10 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
                   ),
                   Divider(height: 1, thickness: 1, color: Colors.grey.shade200),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 12.0,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -291,7 +346,10 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
                             SizedBox(width: 4),
                             Text(
                               '${course.studentCount} students',
-                              style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[700],
+                              ),
                             ),
                           ],
                         ),
@@ -308,7 +366,10 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
                             if (course.isTrending) ...[
                               SizedBox(width: 8),
                               Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.orange,
                                   borderRadius: BorderRadius.circular(4),
@@ -316,7 +377,11 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.trending_up, size: 14, color: Colors.white),
+                                    Icon(
+                                      Icons.trending_up,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
                                     SizedBox(width: 4),
                                     Text(
                                       'Trending',
@@ -345,16 +410,53 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
   }
 
   Widget _buildEnrolledCoursesList(List<Course> courses) {
-    if (courses.isEmpty) {
+    if (_isInstructor && courses.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.school_outlined,
-              size: 80,
-              color: Colors.grey.shade300,
+            Icon(Icons.school_outlined, size: 80, color: Colors.grey.shade300),
+            SizedBox(height: 16),
+            Text(
+              'You haven\'t enrolled in any courses',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
             ),
+            SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    _tabController.animateTo(0); // Navigate to All Courses tab
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.indigo,
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    'Browse Courses',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+                SizedBox(width: 16),
+              ],
+            ),
+          ],
+        ),
+      );
+    } else if (!_isInstructor && courses.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.school_outlined, size: 80, color: Colors.grey.shade300),
             SizedBox(height: 16),
             Text(
               'You haven\'t enrolled in any courses yet',
@@ -376,7 +478,10 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: Text('Browse Courses'),
+              child: Text(
+                'Browse Courses',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -413,7 +518,8 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
                   Container(
                     height: 8,
                     decoration: BoxDecoration(
-                      color: Colors.green, // Different color for enrolled courses
+                      color:
+                          Colors.green, // Different color for enrolled courses
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(12),
                         topRight: Radius.circular(12),
@@ -429,7 +535,10 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
                           width: 70,
                           height: 70,
                           decoration: BoxDecoration(
-                            color: Colors.green.shade50, // Green tint for enrolled courses
+                            color:
+                                Colors
+                                    .green
+                                    .shade50, // Green tint for enrolled courses
                             shape: BoxShape.circle,
                           ),
                           child: Center(
@@ -453,7 +562,10 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.green.shade800, // Green text for enrolled courses
+                                  color:
+                                      Colors
+                                          .green
+                                          .shade800, // Green text for enrolled courses
                                 ),
                               ),
                               SizedBox(height: 6),
@@ -470,7 +582,11 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
                               SizedBox(height: 10),
                               Row(
                                 children: [
-                                  Icon(Icons.person, size: 16, color: Colors.grey),
+                                  Icon(
+                                    Icons.person,
+                                    size: 16,
+                                    color: Colors.grey,
+                                  ),
                                   SizedBox(width: 4),
                                   Text(
                                     course.instructorName,
@@ -489,13 +605,20 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
                   ),
                   Divider(height: 1, thickness: 1, color: Colors.grey.shade200),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 12.0,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.calendar_today, size: 16, color: Colors.grey),
+                            Icon(
+                              Icons.calendar_today,
+                              size: 16,
+                              color: Colors.grey,
+                            ),
                             SizedBox(width: 4),
                             Text(
                               'Enrolled',
@@ -508,12 +631,14 @@ class _CoursesPageState extends State<CoursesPage> with SingleTickerProviderStat
                           ],
                         ),
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.green.shade50,
                             borderRadius: BorderRadius.circular(20),
                           ),
-                         
                         ),
                       ],
                     ),

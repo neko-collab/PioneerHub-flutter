@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pioneerhub_app/views/auth/login.dart';
 import 'package:pioneerhub_app/views/auth/register.dart';
 import 'package:pioneerhub_app/views/auth/register-instructor.dart';
-import 'package:pioneerhub_app/views/auth/register-employer.dart';
-import 'package:pioneerhub_app/views/auth/register-admin.dart';
+
 
 class RegisterSelectPage extends StatelessWidget {
   @override
@@ -50,22 +49,6 @@ class RegisterSelectPage extends StatelessWidget {
                     Icons.person_2,
                     "Register as an instructor to teach courses",
                     () => Navigator.push(context, MaterialPageRoute(builder: (context) => RegisterInstructorPage())),
-                  ),
-                  const SizedBox(height: 15),
-                  _buildRegistrationOption(
-                    context,
-                    "Employer",
-                    Icons.business,
-                    "Register as an employer to post internships",
-                    () => Navigator.push(context, MaterialPageRoute(builder: (context) => RegisterEmployerPage())),
-                  ),
-                  const SizedBox(height: 15),
-                  _buildRegistrationOption(
-                    context,
-                    "Admin",
-                    Icons.admin_panel_settings,
-                    "Register as an admin (requires approval)",
-                    () => Navigator.push(context, MaterialPageRoute(builder: (context) => RegisterAdminPage())),
                   ),
                   const SizedBox(height: 25),
                   Stack(

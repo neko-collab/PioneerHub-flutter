@@ -27,7 +27,11 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
   void initState() {
     super.initState();
     _loadUserData();
-    _loadProjectDetails();
+    
+    // Use addPostFrameCallback to delay loading project details until after the build is complete
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadProjectDetails();
+    });
   }
 
   Future<void> _loadUserData() async {
@@ -51,6 +55,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     final projectController = Provider.of<ProjectController>(context, listen: false);
     
     try {
+      // Add debug information
+      print('Loading project details for ID: ${widget.projectId}');
+      
       final project = await projectController.fetchProjectDetails(widget.projectId);
       
       if (project != null) {
@@ -60,12 +67,14 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
           // Check if user is the owner
           if (_loggedInUser != null) {
             _isOwner = project.submittedBy == _loggedInUser!.id;
+            print('Current user is owner: $_isOwner');
             
             // Check if user has already requested collaboration
             if (project.collaborators != null) {
               _hasRequestedCollaboration = project.collaborators!.any(
                 (collaborator) => collaborator.id == _loggedInUser!.id
               );
+              print('Has requested collaboration: $_hasRequestedCollaboration');
             }
           }
         });
@@ -74,8 +83,15 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
         if (_isOwner) {
           _loadCollaborationRequests();
         }
+      } else {
+        // Handle error case
+        print('Project controller returned null - Error: ${projectController.error}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading project: ${projectController.error ?? "Unknown error"}')),
+        );
       }
     } catch (e) {
+      print('Exception in _loadProjectDetails: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading project details: $e')),
       );
@@ -92,12 +108,16 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     final projectController = Provider.of<ProjectController>(context, listen: false);
     
     try {
+      print('Loading collaboration requests for project ID: ${_project!.id}');
       final requests = await projectController.fetchCollaborationRequests(_project!.id);
+      print('Loaded ${requests.length} collaboration requests');
+      
       setState(() {
         _collaborationRequests = requests;
         _loadingRequests = false;
       });
     } catch (e) {
+      print('Error loading collaboration requests: $e');
       setState(() {
         _loadingRequests = false;
       });
@@ -680,6 +700,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
             ),
     );

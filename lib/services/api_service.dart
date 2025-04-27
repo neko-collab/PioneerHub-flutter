@@ -18,10 +18,8 @@ class ApiService {
   Future<http.Response> post(String endpoint, Map<String, dynamic> data, {String? token}) async {
     final url = Uri.parse('$baseUrl$endpoint');
     final headers = await _getHeaders(token);
-    print(headers);
-    print(data);
     final response = await http.post(url, headers: headers, body: jsonEncode(data));
-    print(response.body);
+    print('Response: ${response.body}');
     _handleResponse(response);
     return response;
   }

@@ -239,6 +239,8 @@ class AuthController {
         'otp': otp,
       });
 
+      print(response.body); // Debugging line
+
       final responseData = jsonDecode(response.body);
       if (response.statusCode != 200) {
         throw Exception(responseData['message']);
@@ -321,6 +323,15 @@ class AuthController {
       await box.clear();
       throw Exception('Error during logout: $e');
     }
+  }
+
+  bool isInstructor() {
+    var box = Hive.box('authBox');
+    var user = box.get('user');
+    if (user != null) {
+      return user['role'] == 'instructor';
+    }
+    return false;
   }
   
   Future<String?> getAuthToken() async {

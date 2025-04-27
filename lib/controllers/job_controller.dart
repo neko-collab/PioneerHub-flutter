@@ -97,7 +97,6 @@ class JobController {
           'job_id': jobId,
           if (coverLetter != null) 'cover_letter': coverLetter,
         });
-        print(response.body);
         if (response.statusCode != 200) {
           final errorData = jsonDecode(response.body);
           throw Exception('Failed to apply for job: ${errorData['message']}');
@@ -149,7 +148,6 @@ class JobController {
       final response = await apiService.post('/jobs.php', {
         'action': 'myApplications',
       });
-      print(response.body);
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         return (responseData['data'] as List)

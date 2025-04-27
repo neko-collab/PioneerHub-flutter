@@ -1,5 +1,6 @@
 import 'package:pioneerhub_app/services/api_service.dart';
 import 'package:pioneerhub_app/models/course.dart';
+import 'package:pioneerhub_app/models/payment_response.dart';
 import 'dart:convert';
 import 'package:hive/hive.dart';
 
@@ -126,21 +127,15 @@ class CourseController {
     }
   }
 
-  Future<List<Course>> instructorsCourses(int instructorId) async {
+  Future<InstructorCoursesResponse> instructorsCourses(int instructorId) async {
     try {
-     
-      
-      
       final response = await apiService.post('/courses.php', {
         'action': 'instructorsCourses',
         'instructor_id': instructorId,
       });
-
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        return (responseData['data'] as List)
-            .map((course) => Course.fromJson(course))
-            .toList();
+        return InstructorCoursesResponse.fromJson(responseData['data']);
       } else {
         final errorData = jsonDecode(response.body);
         throw Exception('Failed to list instructor\'s courses: ${errorData['message']}');
@@ -188,11 +183,8 @@ class CourseController {
     }
   }
 
-  Future<List<Map<String, dynamic>>> courseUsers(int courseId) async {
+  Future<List<CourseStudent>> courseUsers(int courseId) async {
     try {
-     
-      
-      
       final response = await apiService.post('/courses.php', {
         'action': 'courseUsers',
         'course_id': courseId,
@@ -200,7 +192,9 @@ class CourseController {
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        return List<Map<String, dynamic>>.from(responseData['data']);
+        return (responseData['data'] as List)
+            .map((user) => CourseStudent.fromJson(user))
+            .toList();
       } else {
         final errorData = jsonDecode(response.body);
         throw Exception('Failed to list course users: ${errorData['message']}');
@@ -227,6 +221,29 @@ class CourseController {
       }
     } catch (e) {
       throw Exception('Failed to update verification status: $e');
+    }
+  }
+
+  Future<CoursePaymentResponse> processKhaltiPayment(int courseId, String token, String transactionId) async {
+    try {
+      final response = await apiService.post('/courses.php', {
+        'action': 'processKhaltiPayment',
+        'course_id': courseId,
+        'token': token,
+        'transaction_id': transactionId,
+        'user_id': Hive.box('authBox').get('user')['id'],
+      });
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        responseData['success'] = true; // Ensure success is true for the response
+        return CoursePaymentResponse.fromJson(responseData);
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception('Failed to process payment: ${errorData['message']}');
+      }
+    } catch (e) {
+      throw Exception('Failed to process payment: $e');
     }
   }
 }
