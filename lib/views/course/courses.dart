@@ -24,6 +24,8 @@ class _CoursesPageState extends State<CoursesPage>
   List<Course> _trendingCourses = [];
   List<Course> _enrolledCourses = [];
   List<Course> _filteredCourses = [];
+  List<Course> _originalTrendingCourses = [];
+  List<Course> _originalEnrolledCourses = [];
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
   bool _isInstructor = false;
@@ -60,7 +62,9 @@ class _CoursesPageState extends State<CoursesPage>
         _courses = results[0];
         _filteredCourses = results[0];
         _trendingCourses = results[1];
+        _originalTrendingCourses = results[1];
         _enrolledCourses = results[2];
+        _originalEnrolledCourses = results[2];
         _isLoading = false;
       });
     } catch (e) {
@@ -79,12 +83,25 @@ class _CoursesPageState extends State<CoursesPage>
   void _filterCourses() {
     final query = _searchController.text.toLowerCase();
     setState(() {
-      _filteredCourses =
-          _courses.where((course) {
-            return course.title.toLowerCase().contains(query) ||
-                course.description.toLowerCase().contains(query) ||
-                course.instructorName.toLowerCase().contains(query);
-          }).toList();
+      _filteredCourses = _courses.where((course) {
+        return course.title.toLowerCase().contains(query) ||
+            course.description.toLowerCase().contains(query) ||
+            course.instructorName.toLowerCase().contains(query);
+      }).toList();
+      
+      // Also filter trending courses
+      _trendingCourses = _originalTrendingCourses.where((course) {
+        return course.title.toLowerCase().contains(query) ||
+            course.description.toLowerCase().contains(query) ||
+            course.instructorName.toLowerCase().contains(query);
+      }).toList();
+      
+      // Also filter enrolled courses
+      _enrolledCourses = _originalEnrolledCourses.where((course) {
+        return course.title.toLowerCase().contains(query) ||
+            course.description.toLowerCase().contains(query) ||
+            course.instructorName.toLowerCase().contains(query);
+      }).toList();
     });
   }
 

@@ -83,12 +83,13 @@ class AuthController {
         'email': email,
         'password': password,
         'bio': bio,
-        'qualifications': qualifications,
-        'expertise_areas': expertiseAreas,
-        'years_experience': yearsExperience,
+        'qualification': qualifications,
+        'specialization': expertiseAreas,
+        'experience_years': yearsExperience,
       });
 
       final responseData = jsonDecode(response.body);
+      print(responseData);
       
       if (response.statusCode != 200) {
         throw Exception(responseData['message']);
@@ -239,8 +240,6 @@ class AuthController {
         'otp': otp,
       });
 
-      print(response.body); // Debugging line
-
       final responseData = jsonDecode(response.body);
       if (response.statusCode != 200) {
         throw Exception(responseData['message']);
@@ -268,16 +267,15 @@ class AuthController {
     }
   }
   
-  Future<void> updateProfile(Map<String, dynamic> userData) async {
+  Future<User?> updateProfileDetails(Map<String, dynamic> userData) async {
     try {
-      var box = Hive.box('authBox');
-      
-      final response = await apiService.post('/auth.php', {
+      final response = await apiService.post('/profile.php', {
         'action': 'updateProfile',
         ...userData,
       });
 
       final responseData = jsonDecode(response.body);
+
       if (response.statusCode != 200) {
         throw Exception(responseData['message']);
       }
@@ -285,10 +283,32 @@ class AuthController {
       // Update the stored user data
       if (responseData['data'] != null) {
         final user = User.fromJson(responseData['data']);
+        var box = Hive.box('authBox');
         await box.put('user', user.toJson());
+        return user;
       }
+      return null;
     } catch (e) {
       throw Exception('Failed to update profile: $e');
+    }
+  }
+
+  Future<void> changeUserPassword(String currentPassword, String newPassword, String confirmPassword) async {
+    try {
+      final response = await apiService.post('/profile.php', {
+        'action': 'changePassword',
+        'current_password': currentPassword,
+        'new_password': newPassword,
+        'confirm_password': confirmPassword,
+      });
+
+      final responseData = jsonDecode(response.body);
+      
+      if (response.statusCode != 200) {
+        throw Exception(responseData['message']);
+      }
+    } catch (e) {
+      throw Exception('Failed to change password: $e');
     }
   }
 
@@ -337,5 +357,21 @@ class AuthController {
   Future<String?> getAuthToken() async {
     var box = Hive.box('authBox');
     return box.get('token') as String?;
+  }
+
+  Future<Map<String, dynamic>?> getProfileData() async {
+    try {
+      final response = await apiService.get('/profile.php?id=${Hive.box('authBox').get('user')['id']}', token: await getAuthToken());
+      
+      final responseData = jsonDecode(response.body);
+      
+      if (response.statusCode != 200) {
+        throw Exception(responseData['message']);
+      }
+      
+      return responseData['data'];
+    } catch (e) {
+      throw Exception('Failed to fetch profile data: $e');
+    }
   }
 }

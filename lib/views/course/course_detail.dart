@@ -177,66 +177,76 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
                   // Instructor section with "View Students" button for instructors
                   Card(
                     elevation: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Instructor',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => InstructorDetailPage(instructorId: widget.course.instructorId, instructorName: widget.course.instructorName,),
+                          ),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Instructor',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                          SizedBox(height: 12),
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.8),
-                                child: Text(
-                                  widget.course.instructorName[0].toUpperCase(),
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                            SizedBox(height: 12),
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.8),
+                                  child: Text(
+                                    widget.course.instructorName[0].toUpperCase(),
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      widget.course.instructorName,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
+                                SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        widget.course.instructorName,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
                                       ),
-                                    ),
-                                    Text(
-                                      widget.course.instructorEmail,
-                                      style: TextStyle(
-                                        color: Colors.grey[700],
-                                        fontSize: 14,
+                                      Text(
+                                        widget.course.instructorEmail,
+                                        style: TextStyle(
+                                          color: Colors.grey[700],
+                                          fontSize: 14,
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (_isInstructor && _isCurrentInstructorsCourse)
-                                ElevatedButton.icon(
-                                  icon: Icon(Icons.people, size: 16),
-                                  label: Text('View Students'),
-                                  onPressed: _viewCourseStudents,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green,
-                                    foregroundColor: Colors.white,
+                                    ],
                                   ),
                                 ),
-                            ],
-                          ),
-                        ],
+                                if (_isInstructor && _isCurrentInstructorsCourse)
+                                  ElevatedButton.icon(
+                                    icon: Icon(Icons.people, size: 16),
+                                    label: Text('View Students'),
+                                    onPressed: _viewCourseStudents,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -364,8 +374,6 @@ class _PaymentMethodSheetState extends State<PaymentMethodSheet> {
   void _handlePayment() async {
     if (_selectedPaymentMethod == 0) {
       _handleKhaltiPayment();
-    } else if (_selectedPaymentMethod == 1) {
-      _handleCODPayment();
     } else {
       _handleCardPayment();
     }
@@ -463,14 +471,6 @@ class _PaymentMethodSheetState extends State<PaymentMethodSheet> {
     }
   }
 
-  void _handleCODPayment() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Cash on Delivery is not available for course registration'),
-        backgroundColor: Colors.orange,
-      ),
-    );
-  }
 
   void _handleCardPayment() {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -523,7 +523,6 @@ class _PaymentMethodSheetState extends State<PaymentMethodSheet> {
             'Pay securely using Khalti',
             'assets/images/khaltilogo.png',
           ),
-       
           _buildPaymentOption(
             2,
             'Credit/Debit Card',

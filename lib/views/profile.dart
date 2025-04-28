@@ -8,6 +8,8 @@ import 'package:pioneerhub_app/views/course/courses.dart';
 import 'package:pioneerhub_app/views/course/instructor_courses_view.dart';
 import 'package:pioneerhub_app/views/internship/internships.dart';
 import 'package:pioneerhub_app/views/job/jobs.dart';
+import 'package:pioneerhub_app/views/profile/change_password_page.dart';
+import 'package:pioneerhub_app/views/profile/edit_profile.dart';
 import 'package:pioneerhub_app/views/project/projects.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -158,14 +160,24 @@ class _ProfilePageState extends State<ProfilePage> {
                           icon: Icons.lock_outline,
                           title: 'Change Password',
                           onTap: () {
-                            // Navigate to change password page
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ChangePasswordPage(),
+                              ),
+                            );
                           },
                         ),
                         _buildSettingTile(
                           icon: Icons.edit,
                           title: 'Edit Profile',
                           onTap: () {
-                            // Navigate to edit profile page
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => EditProfilePage(user: _loggedInUser!),
+                              ),
+                            );
                           },
                         ),
                         SizedBox(height: 16),

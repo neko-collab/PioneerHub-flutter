@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:hive/hive.dart';
 
 class ApiService {
-  String baseUrl = 'http://192.168.1.96/pioneer_backend/backend';
+  String baseUrl = 'http://192.168.18.60/Pioneer/backend';
 
   ApiService();
 
@@ -19,7 +19,6 @@ class ApiService {
     final url = Uri.parse('$baseUrl$endpoint');
     final headers = await _getHeaders(token);
     final response = await http.post(url, headers: headers, body: jsonEncode(data));
-    print('Response: ${response.body}');
     _handleResponse(response);
     return response;
   }

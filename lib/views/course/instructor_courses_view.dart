@@ -125,16 +125,6 @@ class _InstructorCoursesViewState extends State<InstructorCoursesView> {
                   color: Colors.indigo,
                   child: _buildCoursesList(),
                 ),
-      floatingActionButton: _isInstructor ? FloatingActionButton(
-        onPressed: () {
-          // Navigate to create new course
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Create new course feature coming soon')),
-          );
-        },
-        backgroundColor: Colors.indigo,
-        child: const Icon(Icons.add, color: Colors.white),
-      ) : null,
     );
   }
 

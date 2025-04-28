@@ -540,7 +540,7 @@ class _InternshipDetailPageState extends State<InternshipDetailPage> {
                   )
                 : Text(
                     'Apply Now',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
           );
   }
