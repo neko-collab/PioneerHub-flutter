@@ -363,6 +363,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
                       ),

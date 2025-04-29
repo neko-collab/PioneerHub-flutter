@@ -700,6 +700,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
             ),
     );
