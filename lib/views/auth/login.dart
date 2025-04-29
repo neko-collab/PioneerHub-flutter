@@ -49,7 +49,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final pioneerHubInfoName = _pioneerHubInfo?.name ?? 'PioneerHub';
+    final pioneerHubInfoName = _pioneerHubInfo?.name ?? 'Pioneer Hub Space';
     return Scaffold(
       backgroundColor: Colors.white,
       resizeToAvoidBottomInset: false,
@@ -68,7 +68,7 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   Align(
                     alignment: Alignment.topLeft,
-                    child: Text("Login on $pioneerHubInfoName",
+                    child: Text("Login on Pioneer Hub Space",
                         style: const TextStyle(
                             fontSize: 18,
                             color: Colors.indigo,
@@ -84,7 +84,7 @@ class _LoginPageState extends State<LoginPage> {
                           controller: _emailController,
                           decoration: const InputDecoration(
                             icon: Icon(Icons.alternate_email_outlined, color: Colors.grey),
-                            labelText: 'Enter your email.',
+                            labelText: 'Enter your email',
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
